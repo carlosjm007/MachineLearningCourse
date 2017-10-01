@@ -1,0 +1,220 @@
+<html>
+
+<head>
+<style type="text/css">
+.knitr .inline {
+  background-color: #f7f7f7;
+  border:solid 1px #B0B0B0;
+}
+.error {
+	font-weight: bold;
+	color: #FF0000;
+}
+.warning {
+	font-weight: bold;
+}
+.message {
+	font-style: italic;
+}
+.source, .output, .warning, .error, .message {
+	padding: 0 1em;
+  border:solid 1px #F7F7F7;
+}
+.source {
+  background-color: #f5f5f5;
+}
+.rimage .left {
+  text-align: left;
+}
+.rimage .right {
+  text-align: right;
+}
+.rimage .center {
+  text-align: center;
+}
+.hl.num {
+  color: #AF0F91;
+}
+.hl.str {
+  color: #317ECC;
+}
+.hl.com {
+  color: #AD95AF;
+  font-style: italic;
+}
+.hl.opt {
+  color: #000000;
+}
+.hl.std {
+  color: #585858;
+}
+.hl.kwa {
+  color: #295F94;
+  font-weight: bold;
+}
+.hl.kwb {
+  color: #B05A65;
+}
+.hl.kwc {
+  color: #55aa55;
+}
+.hl.kwd {
+  color: #BC5A65;
+  font-weight: bold;
+}
+</style>
+<title>Machine learning</title>
+</head>
+
+<body>
+
+<h2>Practical Machine Learning</h2>
+<h3>Carlos José Manosalva</h3>
+<h3>September 30, 2017</h3>
+
+<p>This document has been written to complete the machine learning course.</p>
+
+<p>First of all, We are going to define the librarys:</p>
+
+<div class="chunk" id="unnamed-chunk-1"><div class="rcode"><div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl std">(caret);</span>
+</pre></div>
+<div class="message"><pre class="knitr r">## Loading required package: lattice
+</pre></div>
+<div class="message"><pre class="knitr r">## Loading required package: ggplot2
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl std">(rpart);</span>
+</pre></div>
+</div></div>
+
+<p>In this part, we are going to load the data from "http://groupware.les.inf.puc-rio.br/har" they offered this information about personal activity taken from his devices; in this case, the data comes from people who made barbell lifts correctly and incorrectly in 5 different ways.</p>
+
+<p>Our target is to predict the manner in which they did the exercise.</p>
+<div class="chunk" id="unnamed-chunk-2"><div class="rcode"><div class="source"><pre class="knitr r"><span class="hl std">training</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">read.csv</span><span class="hl std">(</span><span class="hl str">&quot;pml-training.csv&quot;</span><span class="hl std">);</span>
+<span class="hl std">testing</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">read.csv</span><span class="hl std">(</span><span class="hl str">&quot;pml-testing.csv&quot;</span><span class="hl std">);</span>
+</pre></div>
+</div></div>
+
+<p>To do a good job, We will clean data from the variables where exist more than 50% na records and we will delete columns where we'll cannot find variability through the rows</p>
+<div class="chunk" id="unnamed-chunk-3"><div class="rcode"><div class="source"><pre class="knitr r"><span class="hl std">i_nzv</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">nearZeroVar</span><span class="hl std">(training,</span> <span class="hl kwc">saveMetrics</span><span class="hl std">=</span><span class="hl num">TRUE</span><span class="hl std">);</span>
+<span class="hl std">training</span> <span class="hl kwb">&lt;-</span> <span class="hl std">training[,</span> <span class="hl opt">!</span><span class="hl std">i_nzv</span><span class="hl opt">$</span><span class="hl std">nzv];</span>
+
+<span class="hl std">i_nrows</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">nrow</span><span class="hl std">(training);</span>
+<span class="hl std">i_names_columns</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">c</span><span class="hl std">();</span>
+<span class="hl std">i_dataRmNA</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">c</span><span class="hl std">();</span>
+<span class="hl kwa">for</span><span class="hl std">(i</span> <span class="hl kwa">in</span> <span class="hl kwd">names</span><span class="hl std">(training)){</span>
+        <span class="hl kwa">if</span> <span class="hl std">(i</span> <span class="hl opt">!=</span> <span class="hl str">&quot;classe&quot;</span><span class="hl std">){</span>
+                        <span class="hl std">dataRmNA</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">sum</span><span class="hl std">(</span><span class="hl kwd">is.na</span><span class="hl std">(training[,</span><span class="hl kwd">c</span><span class="hl std">(i)]));</span>
+                        <span class="hl kwa">if</span> <span class="hl std">(</span><span class="hl opt">!</span><span class="hl std">(dataRmNA</span> <span class="hl opt">&gt;</span> <span class="hl std">(i_nrows</span><span class="hl opt">*</span><span class="hl num">0.5</span><span class="hl std">))){</span>
+                                <span class="hl std">i_names_columns</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">c</span><span class="hl std">(i_names_columns, i);</span>
+                        <span class="hl std">}</span>
+        <span class="hl std">}</span>
+<span class="hl std">};</span>
+
+<span class="hl std">training</span> <span class="hl kwb">&lt;-</span> <span class="hl std">training[,</span> <span class="hl kwd">c</span><span class="hl std">(i_names_columns,</span><span class="hl str">&quot;classe&quot;</span><span class="hl std">)];</span>
+<span class="hl std">testing</span> <span class="hl kwb">&lt;-</span> <span class="hl std">testing[, i_names_columns];</span>
+</pre></div>
+</div></div>
+
+<p>To do tests, We are going to split the data</p>
+<div class="chunk" id="unnamed-chunk-4"><div class="rcode"><div class="source"><pre class="knitr r"><span class="hl std">inTrain</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">createDataPartition</span><span class="hl std">(</span><span class="hl kwc">y</span><span class="hl std">=training</span><span class="hl opt">$</span><span class="hl std">classe,</span> <span class="hl kwc">p</span><span class="hl std">=</span><span class="hl num">0.6</span><span class="hl std">,</span> <span class="hl kwc">list</span><span class="hl std">=</span><span class="hl num">FALSE</span><span class="hl std">);</span>
+
+<span class="hl std">i_training</span> <span class="hl kwb">&lt;-</span> <span class="hl std">training[inTrain,];</span>
+<span class="hl std">i_testing</span> <span class="hl kwb">&lt;-</span> <span class="hl std">training[</span><span class="hl opt">-</span><span class="hl std">inTrain,];</span>
+</pre></div>
+</div></div>
+
+
+<p>We are going to use the decision tree algorithm in our model:</p>
+<div class="chunk" id="unnamed-chunk-5"><div class="rcode"><div class="source"><pre class="knitr r"><span class="hl kwd">set.seed</span><span class="hl std">(</span><span class="hl num">2233</span><span class="hl std">);</span>
+
+<span class="hl std">modelFit</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">rpart</span><span class="hl std">(classe</span> <span class="hl opt">~</span> <span class="hl std">.,</span> <span class="hl kwc">data</span><span class="hl std">=i_training,</span> <span class="hl kwc">method</span><span class="hl std">=</span><span class="hl str">&quot;class&quot;</span><span class="hl std">);</span>
+<span class="hl std">modelFit</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## n= 11776 
+## 
+## node), split, n, loss, yval, (yprob)
+##       * denotes terminal node
+## 
+##  1) root 11776 8428 A (0.28 0.19 0.17 0.16 0.18)  
+##    2) X&lt; 5580.5 3348    0 A (1 0 0 0 0) *
+##    3) X&gt;=5580.5 8428 6149 B (0 0.27 0.24 0.23 0.26)  
+##      6) X&lt; 9378.5 2279    0 B (0 1 0 0 0) *
+##      7) X&gt;=9378.5 6149 3984 E (0 0 0.33 0.31 0.35)  
+##       14) X&lt; 16016 3984 1930 C (0 0 0.52 0.48 0)  
+##         28) X&lt; 12799 2054    0 C (0 0 1 0 0) *
+##         29) X&gt;=12799 1930    0 D (0 0 0 1 0) *
+##       15) X&gt;=16016 2165    0 E (0 0 0 0 1) *
+</pre></div>
+</div></div>
+
+<p>As you can see, I have made a terrible mistake, the decision tree only uses the X column because is an enumeration of the rows, we have to delete that column.</p>
+<div class="chunk" id="unnamed-chunk-6"><div class="rcode"><div class="source"><pre class="knitr r"><span class="hl std">i_training</span><span class="hl opt">$</span><span class="hl std">X</span> <span class="hl kwb">=</span> <span class="hl kwa">NULL</span><span class="hl std">;</span>
+</pre></div>
+</div></div>
+
+<p>So we are going to train again and prove the model.</p>
+<div class="chunk" id="unnamed-chunk-7"><div class="rcode"><div class="source"><pre class="knitr r"><span class="hl std">modelFit</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">train</span><span class="hl std">(classe</span> <span class="hl opt">~</span><span class="hl std">.,</span> <span class="hl kwc">data</span><span class="hl std">=i_training,</span> <span class="hl kwc">method</span> <span class="hl std">=</span> <span class="hl str">&quot;svmLinear&quot;</span><span class="hl std">);</span>
+</pre></div>
+<div class="message"><pre class="knitr r">## Loading required package: kernlab
+</pre></div>
+<div class="message"><pre class="knitr r">## 
+## Attaching package: 'kernlab'
+</pre></div>
+<div class="message"><pre class="knitr r">## The following object is masked from 'package:ggplot2':
+## 
+##     alpha
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl std">i_testing</span><span class="hl opt">$</span><span class="hl std">classtesting</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">predict</span><span class="hl std">(modelFit,</span> <span class="hl kwc">newdata</span> <span class="hl std">= i_testing)</span>
+
+<span class="hl kwd">confusionMatrix</span><span class="hl std">(i_testing</span><span class="hl opt">$</span><span class="hl std">classtesting, i_testing</span><span class="hl opt">$</span><span class="hl std">classe)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction    A    B    C    D    E
+##          A 2183  164   10    1    0
+##          B   45 1260  111    4    0
+##          C    4   94 1232   99    6
+##          D    0    0   15 1106   65
+##          E    0    0    0   76 1371
+## 
+## Overall Statistics
+##                                          
+##                Accuracy : 0.9115         
+##                  95% CI : (0.905, 0.9177)
+##     No Information Rate : 0.2845         
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16      
+##                                          
+##                   Kappa : 0.8879         
+##  Mcnemar's Test P-Value : NA             
+## 
+## Statistics by Class:
+## 
+##                      Class: A Class: B Class: C Class: D Class: E
+## Sensitivity            0.9780   0.8300   0.9006   0.8600   0.9508
+## Specificity            0.9688   0.9747   0.9687   0.9878   0.9881
+## Pos Pred Value         0.9258   0.8873   0.8585   0.9325   0.9475
+## Neg Pred Value         0.9911   0.9599   0.9788   0.9730   0.9889
+## Prevalence             0.2845   0.1935   0.1744   0.1639   0.1838
+## Detection Rate         0.2782   0.1606   0.1570   0.1410   0.1747
+## Detection Prevalence   0.3005   0.1810   0.1829   0.1512   0.1844
+## Balanced Accuracy      0.9734   0.9024   0.9346   0.9239   0.9694
+</pre></div>
+</div></div>
+
+<p>With the confusionMatrix we can see this is a good model.</p>
+<p>Now we'll use the test data to predict the manner in which they did the exercise.</p>
+<div class="chunk" id="unnamed-chunk-8"><div class="rcode"><div class="source"><pre class="knitr r"><span class="hl std">testing</span><span class="hl opt">$</span><span class="hl std">testpre</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">predict</span><span class="hl std">(modelFit,</span> <span class="hl kwc">newdata</span> <span class="hl std">= testing)</span>
+<span class="hl kwa">for</span><span class="hl std">(i</span> <span class="hl kwa">in</span> <span class="hl num">1</span><span class="hl opt">:</span><span class="hl kwd">length</span><span class="hl std">(testing</span><span class="hl opt">$</span><span class="hl std">testpre)){</span>
+        <span class="hl std">filename</span> <span class="hl kwb">=</span> <span class="hl kwd">paste0</span><span class="hl std">(</span><span class="hl str">&quot;case_&quot;</span><span class="hl std">,i,</span><span class="hl str">&quot;.txt&quot;</span><span class="hl std">)</span>
+        <span class="hl kwd">write.table</span><span class="hl std">(testing</span><span class="hl opt">$</span><span class="hl std">testpre[i],</span><span class="hl kwc">file</span><span class="hl std">=filename,</span><span class="hl kwc">quote</span><span class="hl std">=</span><span class="hl num">FALSE</span><span class="hl std">,</span><span class="hl kwc">row.names</span><span class="hl std">=</span><span class="hl num">FALSE</span><span class="hl std">,</span><span class="hl kwc">col.names</span><span class="hl std">=</span><span class="hl num">FALSE</span><span class="hl std">)</span>
+<span class="hl std">}</span>
+</pre></div>
+</div></div>
+
+<h3>Conclusion</h3>
+<p>The first prediction model, when the data was splitted to train the decision tree, we didn't discriminate the X column, this can show good results when the same data are predicted, but it is not usefull with other data.</p>
+
+
+</body>
+</html>
